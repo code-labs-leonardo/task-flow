@@ -235,6 +235,68 @@ constraint FK com Restrict garante no nível do banco).
 
 ---
 
+## 15. `IExceptionHandler` não invocado em ambiente Development — CORRIGIDO
+
+**Sugestão da IA:** implementou o middleware de exceções usando `IExceptionHandler` do ASP.NET Core 8+:
+```csharp
+builder.Services.AddExceptionHandler<ExceptionHandler>();
+app.UseExceptionHandler();
+```
+
+**Problema:** a abordagem via `IExceptionHandler` não era invocada quando a aplicação
+rodava com `ASPNETCORE_ENVIRONMENT=Development` no .NET 10 + Visual Studio.
+`WebApplicationFactory` nos testes executa sem ambiente definido (cai em `Production`) — os testes
+passavam. O VS executa com `Development` — todas as rotas retornavam 500 sem corpo de erro.
+
+**Correção aplicada:** refatorado para a forma clássica via `RequestDelegate`:
+```csharp
+app.UseExceptionHandler(options => options.Run(ExceptionHandler.HandleAsync));
+```
+Essa forma é independente de ambiente — o delegate é sempre executado quando uma exceção
+chega ao middleware, sem variação por `ASPNETCORE_ENVIRONMENT`.
+
+---
+
+## 16. Bug silencioso — reativação de projeto retornava 200 sem efeito — CORRIGIDO
+
+**Sugestão da IA:** o validator do `PATCH /projetos/{id}` aceitava `"active"` como valor
+válido de status, mas o handler tratava apenas `"archived"`. A transição `archived → active`
+era simplesmente ignorada — nenhum erro, nenhuma mudança de estado, retorno 200.
+
+**Problema:** uma requisição que retorna 200 sem executar nada é o pior cenário possível —
+o cliente presume que a operação foi bem-sucedida.
+
+**Minha análise:** o PDF não prevê reativação. Eram três caminhos: (1) implementar reativação;
+(2) retornar 422; (3) ignorar silenciosamente. A opção 3 foi descartada imediatamente.
+A opção 1 seria especulação de requisito não documentado. Decidi proibir explicitamente com 422.
+
+**Correção aplicada:** adicionado `Project.Activate()` na entidade de domínio lançando
+`DomainException`, wired no handler. A regra ficou encapsulada no domínio — não no handler —
+seguindo o princípio de que regras de negócio pertencem à entidade.
+
+---
+
+## 17. Domain e Infra.Persistence com estrutura plana — CORRIGIDO
+
+**Sugestão da IA:** gerou `TaskFlow.Domain` organizado por tipo técnico (`Entities/`, `Enums/`,
+`Repositories/`) e `TaskFlow.Infra.Persistence` com `Configurations/` e `Repositories/` planos —
+enquanto `Application` e `Api` foram gerados por contexto de negócio (`Projects/`, `Tasks/`).
+
+**Problema:** inconsistência no projeto — as duas camadas de baixo seguiam um padrão,
+as duas de cima seguiam outro. Num projeto DDD, o `Domain` deveria ser a camada *mais*
+organizada por contexto, não a menos.
+
+**Identificação:** percebida durante revisão pelo desenvolvedor antes da entrega.
+Refactoring **explicitamente solicitado** — não foi uma omissão aceita.
+
+**Correção aplicada:** reorganizadas as duas camadas para estrutura por contexto:
+- `Domain/Projects/`, `Domain/Tasks/`, `Domain/Shared/`
+- `Infra.Persistence/Projects/`, `Infra.Persistence/Tasks/`
+
+Todos os namespaces atualizados em cascata. 33/33 testes passando após o refactoring.
+
+---
+
 ## Resumo Geral
 
 | # | Problema | Tipo | Status |
@@ -253,3 +315,6 @@ constraint FK com Restrict garante no nível do banco).
 | 12 | `CountAsync + Skip/Take` duplicado nos repositórios | Corrigido | ✓ |
 | 13 | Path com 3 níveis no `appsettings.Development.json` | Corrigido | ✓ |
 | 14 | FK `ProjectId → Project` ausente em `TaskItemConfiguration` | Corrigido | ✓ |
+| 15 | `IExceptionHandler` ignorado em Development | Corrigido | ✓ |
+| 16 | Bug silencioso — reativação retornava 200 sem efeito | Corrigido | ✓ |
+| 17 | Domain/Infra.Persistence com estrutura plana | Corrigido | ✓ |

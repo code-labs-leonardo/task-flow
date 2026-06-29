@@ -205,27 +205,9 @@ Garante consistência no formato de todos os erros da API.
 Erros de negócio (422) retornam `detail` com mensagem explicativa específica,
 conforme definido no contrato `openapi.yaml`.
 
-**Decisão de implementação — forma lambda vs `IExceptionHandler`:**
-
-A Microsoft documenta duas formas de centralizar o tratamento de exceções:
-
-```csharp
-// Forma nova (ASP.NET Core 8+) — via DI
-builder.Services.AddExceptionHandler<MyHandler>();
-app.UseExceptionHandler();
-
-// Forma clássica — via RequestDelegate (existe desde ASP.NET Core 1.0)
-app.UseExceptionHandler(options => options.Run(MyHandler.HandleAsync));
-```
-
-O projeto adotou a **forma clássica** após identificar que a abordagem via `IExceptionHandler`
-não era invocada no ambiente de desenvolvimento com .NET 10 + Visual Studio. A causa raiz:
-`WebApplicationFactory` nos testes executa sem `ASPNETCORE_ENVIRONMENT` definido (cai em
-`Production`), enquanto o VS executa com `Development` — comportamentos diferentes do
-`UseExceptionHandler()` sem argumentos nesse ambiente.
-
-A forma lambda não tem variação de ambiente: o `RequestDelegate` é sempre executado quando
-uma exceção chega ao middleware, independente do ambiente ou da ordem de registro no DI.
+**Implementação:** forma clássica via `RequestDelegate` —
+`app.UseExceptionHandler(options => options.Run(...))` — por ser independente de
+ambiente (`Development` vs `Production`). Detalhes e correção em `ai/revisoes.md §15`.
 
 **Referência:** [Handle errors in ASP.NET Core — Microsoft Docs](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling)
 
@@ -309,12 +291,7 @@ de aliases em todo o projeto. `TaskItem` é o nome de mercado adotado nesse cen�
 **Justificativa:** O PDF define apenas a regra de arquivamento (Regra 1: não arquivar com tarefas
 `in_progress`), mas não especifica o comportamento ao tentar reverter um projeto arquivado.
 
-Durante o desenvolvimento foi identificado um bug silencioso: o validator aceitava `"active"` como
-valor de status válido, mas o handler ignorava a transição sem alterar o estado nem retornar erro.
-O resultado era uma requisição que retornava 200 sem efeito — comportamento enganoso.
-
-A decisão foi **proibir a reativação** (422 com mensagem explicativa) em vez de implementá-la,
-pelos seguintes motivos:
+A decisão foi **proibir a reativação** (422 com mensagem explicativa) pelos seguintes motivos:
 - O PDF não prevê reativação — qualquer implementação seria especulação de requisito.
 - Um sistema que permite arquivar e reativar livremente perde o significado do estado `archived`
   como estado terminal de ciclo de vida.
@@ -322,7 +299,7 @@ pelos seguintes motivos:
   o cliente recebe 200 e presume que a operação foi executada.
 
 A regra foi implementada no método `Project.Activate()` da entidade de domínio, não no handler,
-seguindo o princípio de que regras de negócio pertencem ao domínio.
+seguindo o princípio de que regras de negócio pertencem ao domínio. Ver `ai/revisoes.md §16`.
 
 ---
 
@@ -444,57 +421,6 @@ quebrando a separação de responsabilidades da Clean Architecture.
 **Convenção adotada:** suffix `Input` para o record de payload (ex: `TaskUpdateInput`,
 `ProjectUpdateInput`). O suffix `Request` fica reservado para os DTOs da camada API
 (`TaskUpdateRequest` no controller), evitando conflito de nomes entre camadas.
-
----
-
-## 18. Refactoring — Reorganização do Domain e Infra.Persistence por Contexto
-
-**Decisão:** Reorganizar `TaskFlow.Domain` e `TaskFlow.Infra.Persistence` de estrutura plana
-(por tipo técnico) para estrutura por contexto de negócio, alinhando com o padrão já
-adotado em `TaskFlow.Application` e `TaskFlow.Api`.
-
-**Origem:** Identificado durante revisão pelo desenvolvedor responsável. A inconsistência
-foi percebida e o refactor foi **explicitamente solicitado** antes da entrega — decisão
-consciente, não omissão.
-
-**Situação anterior (inconsistente):**
-
-```
-TaskFlow.Domain/
-├── Entities/      ← Project.cs e TaskItem.cs misturados
-├── Enums/         ← ProjectStatus.cs, TaskItemStatus.cs, TaskPriority.cs misturados
-├── Repositories/  ← IProjectRepository.cs e ITaskItemRepository.cs misturados
-└── Exceptions/    ← DomainException.cs
-
-TaskFlow.Infra.Persistence/
-├── Configurations/ ← ProjectConfiguration.cs e TaskItemConfiguration.cs misturados
-└── Repositories/   ← ProjectRepository.cs e TaskItemRepository.cs misturados
-```
-
-**Situação após o refactor (consistente):**
-
-```
-TaskFlow.Domain/
-├── Projects/   ← Project.cs · ProjectStatus.cs · IProjectRepository.cs
-├── Tasks/      ← TaskItem.cs · TaskItemStatus.cs · TaskPriority.cs · ITaskItemRepository.cs
-└── Shared/     ← DomainException.cs
-
-TaskFlow.Infra.Persistence/
-├── Projects/   ← ProjectConfiguration.cs · ProjectRepository.cs
-└── Tasks/      ← TaskItemConfiguration.cs · TaskItemRepository.cs
-```
-
-**Justificativa:** O Domain é o núcleo do negócio — ser a camada *menos* organizada por
-contexto era a maior das inconsistências. Ao navegar em "Projects", o desenvolvedor
-encontra entidade, enum e interface de repositório no mesmo lugar, sem alternar entre
-pastas técnicas. O mesmo princípio já estava aplicado em `Application` e `Api` desde
-o início.
-
-A `DomainException` foi isolada em `Shared/` por ser uma preocupação transversal ao domínio,
-não pertencente a nenhum contexto específico.
-
-**Impacto:** Todos os namespaces foram atualizados em cascata — `Application`, `Infra.Persistence`,
-`Api.Middleware`. Nenhuma lógica de negócio foi alterada. 33/33 testes passando após o refactor.
 
 ---
 
