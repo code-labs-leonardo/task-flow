@@ -108,7 +108,7 @@ Project (1) ──────────── (N) TaskItem
 
 ---
 
-## 4. Estrutura de Pastas por Contexto
+## 3. Estrutura de Pastas por Contexto
 
 **Decisão:** Organizar por contexto de negócio em todas as camadas, não por tipo técnico.
 
@@ -141,7 +141,7 @@ O mesmo contexto se reflete em `Domain`, `Infra.Persistence` e `Api`.
 
 ---
 
-## 5. Controllers com Responsabilidade Única (SOLID)
+## 4. Controllers com Responsabilidade Única (SOLID)
 
 **Decisão:** Um controller por operação — `{Contexto}CreatorController`, `{Contexto}SearchController`, etc.
 
@@ -162,7 +162,7 @@ Consistente com a nomenclatura `{Contexto}{Acao}` adotada em toda a solução.
 
 ---
 
-## 6. Pipeline de Validação com MediatR
+## 5. Pipeline de Validação com MediatR
 
 **Decisão:** Validação centralizada via `IPipelineBehavior<TRequest, TResponse>` com FluentValidation.
 
@@ -188,7 +188,7 @@ Controller → MediatR.Send(Command | Query)
 
 ---
 
-## 7. Tratamento de Erros
+## 6. Tratamento de Erros
 
 **Decisão:** `ProblemDetails` e `ValidationProblemDetails` nativos do ASP.NET Core (RFC 7807),
 com handler de exceções via `UseExceptionHandler(options => options.Run(...))`.
@@ -213,7 +213,7 @@ ambiente (`Development` vs `Production`). Detalhes e correção em `ai/revisoes.
 
 ---
 
-## 8. Persistência — Dois DbContexts
+## 7. Persistência — Dois DbContexts
 
 **Decisão:** `TaskFlowWriteDbContext` para gravação e `TaskFlowReadDbContext` para leitura.
 
@@ -237,7 +237,7 @@ Hoje apontam para o mesmo arquivo SQLite. A separação é arquitetural, não op
 
 ---
 
-## 9. Banco de Dados — SQLite
+## 8. Banco de Dados — SQLite
 
 **Decisão:** SQLite com arquivo em `./data/taskflow.db`.
 
@@ -256,7 +256,7 @@ de vida do container.
 
 ---
 
-## 10. Configuração e Ambiente
+## 9. Configuração e Ambiente
 
 **Decisão:** `appsettings` por ambiente + `.env` injetado via Docker.
 
@@ -274,7 +274,7 @@ appsettings.Production.json    → produção (valores sensíveis via env vars d
 
 ---
 
-## 11. Nomenclatura — Entidade `TaskItem`
+## 10. Nomenclatura — Entidade `TaskItem`
 
 **Decisão:** A entidade de domínio "Tarefa" foi nomeada `TaskItem`.
 
@@ -284,7 +284,7 @@ de aliases em todo o projeto. `TaskItem` é o nome de mercado adotado nesse cen�
 
 ---
 
-## 12. Regra de Negócio Adicional — Projeto Arquivado Não Pode Ser Reativado
+## 11. Regra de Negócio Adicional — Projeto Arquivado Não Pode Ser Reativado
 
 **Decisão:** Alterar o `status` de um projeto de `archived` para `active` é proibido — retorna 422.
 
@@ -303,7 +303,7 @@ seguindo o princípio de que regras de negócio pertencem ao domínio. Ver `ai/r
 
 ---
 
-## 13. Regra de Negócio Adicional — Transição de Status
+## 12. Regra de Negócio Adicional — Transição de Status
 
 **Decisão:** A transição `pending → done` direta é **proibida**.
 
@@ -315,7 +315,7 @@ no `openapi.yaml` com exemplo de 422 específico para esse caso.
 
 ---
 
-## 14. Estratégia de Testes
+## 13. Estratégia de Testes
 
 **Decisão:** Testes de contrato com `WebApplicationFactory` + xUnit + `System.Net.Http.Json`
 + `Microsoft.OpenApi` + `NJsonSchema` para validação dos responses contra o schema OpenAPI.
@@ -368,7 +368,7 @@ e pode mascarar erros que só aparecem com o banco real.
 
 ---
 
-## 15. Docker — API em Container
+## 14. Docker — API em Container
 
 **Decisão:** API dockerizada via `docker-compose` com volume para o SQLite.
 
@@ -386,7 +386,7 @@ services:
 
 ---
 
-## 16. DTO de entrada para Commands com muitos parâmetros
+## 15. DTO de entrada para Commands com muitos parâmetros
 
 **Decisão:** Commands com mais de 3 parâmetros de payload devem encapsular os dados
 em um record de entrada dedicado (`*Input`), mantendo o Command com apenas `Id + Data`.
@@ -424,7 +424,7 @@ quebrando a separação de responsabilidades da Clean Architecture.
 
 ---
 
-## 17. Paginação nos endpoints de listagem
+## 16. Paginação nos endpoints de listagem
 
 **Decisão:** `GET /projetos` e `GET /projetos/:id/tarefas` retornam um envelope paginado
 (`PagedResponse<T>`) com metadados de navegação. Parâmetros opcionais via query string:
