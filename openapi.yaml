@@ -153,6 +153,14 @@ paths:
                     status: 422
                     detail: "O projeto não pode ser arquivado pois possui uma ou mais tarefas com status 'in_progress'."
                     instance: "/projetos/3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                reativacaoNaoPermitida:
+                  summary: Projeto arquivado não pode ser reativado
+                  value:
+                    type: "https://taskflow.io/errors/project-reactivation-not-allowed"
+                    title: "Erro de regra de negócio"
+                    status: 422
+                    detail: "Não é possível reativar um projeto arquivado."
+                    instance: "/projetos/3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
   # ─────────────────────────────────────────────
   # TAREFAS (aninhadas ao projeto)

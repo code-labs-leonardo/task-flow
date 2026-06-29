@@ -6,19 +6,24 @@ using TaskFlow.Domain.Exceptions;
 
 namespace TaskFlow.Api.Middleware;
 
-public class ExceptionHandler : IExceptionHandler
+public static class ExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
+    public static async Task HandleAsync(HttpContext context)
     {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        if (exception is null) return;
+
         var (status, detail, errors) = exception switch
         {
             NotFoundException ex => (StatusCodes.Status404NotFound, ex.Message, null),
-            DomainException ex => (StatusCodes.Status422UnprocessableEntity, ex.Message, null),
+            DomainException ex   => (StatusCodes.Status422UnprocessableEntity, ex.Message, null),
             ValidationException ex => (StatusCodes.Status400BadRequest, "Um ou mais campos são inválidos.", ex.Errors),
-            _ => (0, null, null)
+            _                    => (0, null, null)
         };
 
-        if (status == 0) return false;
+        if (status == 0) return;
+
+        context.Response.StatusCode = status;
 
         if (errors is not null)
         {
@@ -31,24 +36,22 @@ public class ExceptionHandler : IExceptionHandler
                           g => g.Select(e => e.ErrorMessage).ToArray()))
             {
                 Status = status,
-                Title = "Erro de validação",
+                Title  = "Erro de validação",
                 Detail = detail
             };
-            context.Response.StatusCode = status;
-            await context.Response.WriteAsJsonAsync(validationProblem, ct);
+            await context.Response.WriteAsJsonAsync(validationProblem);
         }
         else
         {
             var problem = new ProblemDetails
             {
                 Status = status,
-                Title = status == 404 ? "Recurso não encontrado" : "Erro de regra de negócio",
+                Title  = status == StatusCodes.Status404NotFound
+                    ? "Recurso não encontrado"
+                    : "Erro de regra de negócio",
                 Detail = detail
             };
-            context.Response.StatusCode = status;
-            await context.Response.WriteAsJsonAsync(problem, ct);
+            await context.Response.WriteAsJsonAsync(problem);
         }
-
-        return true;
     }
 }

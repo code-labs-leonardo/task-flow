@@ -190,7 +190,8 @@ Controller → MediatR.Send(Command | Query)
 
 ## 7. Tratamento de Erros
 
-**Decisão:** `ProblemDetails` e `ValidationProblemDetails` nativos do ASP.NET Core (RFC 7807).
+**Decisão:** `ProblemDetails` e `ValidationProblemDetails` nativos do ASP.NET Core (RFC 7807),
+com handler de exceções via `UseExceptionHandler(options => options.Run(...))`.
 
 **Justificativa:** Padrão nativo desde .NET 7, sem dependência de bibliotecas externas.
 Garante consistência no formato de todos os erros da API.
@@ -203,6 +204,30 @@ Garante consistência no formato de todos os erros da API.
 
 Erros de negócio (422) retornam `detail` com mensagem explicativa específica,
 conforme definido no contrato `openapi.yaml`.
+
+**Decisão de implementação — forma lambda vs `IExceptionHandler`:**
+
+A Microsoft documenta duas formas de centralizar o tratamento de exceções:
+
+```csharp
+// Forma nova (ASP.NET Core 8+) — via DI
+builder.Services.AddExceptionHandler<MyHandler>();
+app.UseExceptionHandler();
+
+// Forma clássica — via RequestDelegate (existe desde ASP.NET Core 1.0)
+app.UseExceptionHandler(options => options.Run(MyHandler.HandleAsync));
+```
+
+O projeto adotou a **forma clássica** após identificar que a abordagem via `IExceptionHandler`
+não era invocada no ambiente de desenvolvimento com .NET 10 + Visual Studio. A causa raiz:
+`WebApplicationFactory` nos testes executa sem `ASPNETCORE_ENVIRONMENT` definido (cai em
+`Production`), enquanto o VS executa com `Development` — comportamentos diferentes do
+`UseExceptionHandler()` sem argumentos nesse ambiente.
+
+A forma lambda não tem variação de ambiente: o `RequestDelegate` é sempre executado quando
+uma exceção chega ao middleware, independente do ambiente ou da ordem de registro no DI.
+
+**Referência:** [Handle errors in ASP.NET Core — Microsoft Docs](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling)
 
 ---
 
@@ -277,7 +302,31 @@ de aliases em todo o projeto. `TaskItem` é o nome de mercado adotado nesse cen�
 
 ---
 
-## 12. Regra de Negócio Adicional — Transição de Status
+## 12. Regra de Negócio Adicional — Projeto Arquivado Não Pode Ser Reativado
+
+**Decisão:** Alterar o `status` de um projeto de `archived` para `active` é proibido — retorna 422.
+
+**Justificativa:** O PDF define apenas a regra de arquivamento (Regra 1: não arquivar com tarefas
+`in_progress`), mas não especifica o comportamento ao tentar reverter um projeto arquivado.
+
+Durante o desenvolvimento foi identificado um bug silencioso: o validator aceitava `"active"` como
+valor de status válido, mas o handler ignorava a transição sem alterar o estado nem retornar erro.
+O resultado era uma requisição que retornava 200 sem efeito — comportamento enganoso.
+
+A decisão foi **proibir a reativação** (422 com mensagem explicativa) em vez de implementá-la,
+pelos seguintes motivos:
+- O PDF não prevê reativação — qualquer implementação seria especulação de requisito.
+- Um sistema que permite arquivar e reativar livremente perde o significado do estado `archived`
+  como estado terminal de ciclo de vida.
+- A opção silenciosa (aceitar mas não fazer nada) foi descartada por ser o pior dos cenários:
+  o cliente recebe 200 e presume que a operação foi executada.
+
+A regra foi implementada no método `Project.Activate()` da entidade de domínio, não no handler,
+seguindo o princípio de que regras de negócio pertencem ao domínio.
+
+---
+
+## 13. Regra de Negócio Adicional — Transição de Status
 
 **Decisão:** A transição `pending → done` direta é **proibida**.
 
@@ -289,7 +338,7 @@ no `openapi.yaml` com exemplo de 422 específico para esse caso.
 
 ---
 
-## 13. Estratégia de Testes
+## 14. Estratégia de Testes
 
 **Decisão:** Testes de contrato com `WebApplicationFactory` + xUnit + `System.Net.Http.Json`
 + `Microsoft.OpenApi` + `NJsonSchema` para validação dos responses contra o schema OpenAPI.
@@ -342,7 +391,7 @@ e pode mascarar erros que só aparecem com o banco real.
 
 ---
 
-## 14. Docker — API em Container
+## 15. Docker — API em Container
 
 **Decisão:** API dockerizada via `docker-compose` com volume para o SQLite.
 
@@ -360,7 +409,7 @@ services:
 
 ---
 
-## 15. DTO de entrada para Commands com muitos parâmetros
+## 16. DTO de entrada para Commands com muitos parâmetros
 
 **Decisão:** Commands com mais de 3 parâmetros de payload devem encapsular os dados
 em um record de entrada dedicado (`*Input`), mantendo o Command com apenas `Id + Data`.
@@ -398,7 +447,7 @@ quebrando a separação de responsabilidades da Clean Architecture.
 
 ---
 
-## 16. Paginação nos endpoints de listagem
+## 17. Paginação nos endpoints de listagem
 
 **Decisão:** `GET /projetos` e `GET /projetos/:id/tarefas` retornam um envelope paginado
 (`PagedResponse<T>`) com metadados de navegação. Parâmetros opcionais via query string:

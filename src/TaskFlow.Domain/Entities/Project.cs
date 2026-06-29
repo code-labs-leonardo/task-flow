@@ -38,4 +38,10 @@ public class Project
 
         Status = ProjectStatus.Archived;
     }
+
+    public void Activate()
+    {
+        if (Status == ProjectStatus.Archived)
+            throw new DomainException("Não é possível reativar um projeto arquivado.");
+    }
 }

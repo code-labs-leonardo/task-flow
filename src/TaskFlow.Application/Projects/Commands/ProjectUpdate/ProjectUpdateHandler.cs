@@ -32,6 +32,9 @@ public class ProjectUpdateHandler : IRequestHandler<ProjectUpdateCommand, Projec
             project.Archive();
         }
 
+        if (request.Data.Status?.ToLowerInvariant() == "active")
+            project.Activate();
+
         await _repository.UpdateAsync(project, ct);
 
         return new(project.Id, project.Name, project.Description,

@@ -6,8 +6,6 @@ using TaskFlow.Infra.Persistence.Contexts;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<ExceptionHandler>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddApplication();
@@ -15,7 +13,7 @@ builder.Services.AddPersistence(builder.Configuration);
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
+app.UseExceptionHandler(options => options.Run(ExceptionHandler.HandleAsync));
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();

@@ -53,6 +53,19 @@ public class ProjectUpdateTests : IClassFixture<TaskFlowFactory>
     }
 
     [Fact]
+    public async Task PATCH_Projetos_Retorna422_AoTentarReativarProjetoArquivado()
+    {
+        var project = await ApiHelpers.CreateProjectAsync(_client, "Projeto Para Reativar");
+        await _client.PatchAsJsonAsync($"/projetos/{project.Id}", new { status = "archived" });
+
+        var response = await _client.PatchAsJsonAsync(
+            $"/projetos/{project.Id}",
+            new { status = "active" });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact]
     public async Task PATCH_Projetos_Retorna200_AtualizandoNomeEDescricao_EValidaSchema()
     {
         var project = await ApiHelpers.CreateProjectAsync(_client, "Nome Original");
