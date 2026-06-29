@@ -83,15 +83,15 @@ paths:
           description: Filtrar projetos pelo status
           schema:
             $ref: '#/components/schemas/ProjectStatus'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
       responses:
         '200':
-          description: Lista de projetos (array vazio se nenhum encontrado)
+          description: Lista paginada de projetos (items vazio se nenhum encontrado)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProjectResponse'
+                $ref: '#/components/schemas/PaginatedProjectResponse'
 
   /projetos/{id}:
 
@@ -230,15 +230,15 @@ paths:
           description: Filtrar tarefas pela prioridade
           schema:
             $ref: '#/components/schemas/TaskPriority'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
       responses:
         '200':
-          description: Lista de tarefas (array vazio se nenhuma encontrada)
+          description: Lista paginada de tarefas (items vazio se nenhuma encontrada)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TaskResponse'
+                $ref: '#/components/schemas/PaginatedTaskResponse'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -375,6 +375,29 @@ components:
         type: string
         format: uuid
         example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+    PageNumber:
+      name: pageNumber
+      in: query
+      required: false
+      description: Número da página (começa em 1). Padrão 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: Quantidade de itens por página (máx. 100). Padrão 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+        example: 20
 
   schemas:
 
@@ -547,6 +570,54 @@ components:
           readOnly: true
           description: Identificador do projeto pai
           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+    # ── Paginação ──────────────────────────────
+
+    PageMeta:
+      type: object
+      required: [pageNumber, pageSize, totalItems, totalPages]
+      properties:
+        pageNumber:
+          type: integer
+          minimum: 1
+          description: Número da página atual
+          example: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Quantidade de itens por página
+          example: 20
+        totalItems:
+          type: integer
+          description: Total de itens encontrados com os filtros aplicados
+          example: 42
+        totalPages:
+          type: integer
+          description: Total de páginas com base no pageSize
+          example: 3
+
+    PaginatedProjectResponse:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProjectResponse'
+
+    PaginatedTaskResponse:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaskResponse'
 
     # ── Erros (RFC 7807) ───────────────────────
 

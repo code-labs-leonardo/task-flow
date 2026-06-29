@@ -357,3 +357,89 @@ services:
       - ./data:/app/data
     env_file: .env
 ```
+
+---
+
+## 15. DTO de entrada para Commands com muitos parâmetros
+
+**Decisão:** Commands com mais de 3 parâmetros de payload devem encapsular os dados
+em um record de entrada dedicado (`*Input`), mantendo o Command com apenas `Id + Data`.
+
+```csharp
+// Antes — record flat com 6 params
+public record TaskUpdateCommand(Guid Id, string? Title, string? Description,
+    string? Status, string? Priority, string? CompletedAt) : IRequest<TaskResponse>;
+
+// Depois — Command + DTO separado
+public record TaskUpdateInput(string? Title, string? Description,
+    string? Status, string? Priority, string? CompletedAt);
+
+public record TaskUpdateCommand(Guid Id, TaskUpdateInput Data) : IRequest<TaskResponse>;
+```
+
+**Justificativa:**
+Records com muitos parâmetros posicionais sofrem de dois problemas práticos.
+Primeiro, qualquer adição ou reordenação de parâmetro quebra todos os call sites,
+gerando conflito de merge em qualquer branch que toque o mesmo Command.
+Segundo, o construtor posicional exige que o chamador conheça a ordem dos
+parâmetros — acoplamento frágil que não aparece em code review.
+
+O padrão `*Input` + `*Command(Id, Data)` resolve os dois: novos campos entram
+no record `Input` sem tocar a assinatura do Command, e o handler acessa os dados
+por nome (`request.Data.Title`), não por posição.
+
+**Alternativa rejeitada:** usar `[FromBody]` diretamente como parâmetro do handler.
+Isso misturaria a camada de transporte (HTTP) com a camada de aplicação (MediatR),
+quebrando a separação de responsabilidades da Clean Architecture.
+
+**Convenção adotada:** suffix `Input` para o record de payload (ex: `TaskUpdateInput`,
+`ProjectUpdateInput`). O suffix `Request` fica reservado para os DTOs da camada API
+(`TaskUpdateRequest` no controller), evitando conflito de nomes entre camadas.
+
+---
+
+## 16. Paginação nos endpoints de listagem
+
+**Decisão:** `GET /projetos` e `GET /projetos/:id/tarefas` retornam um envelope paginado
+(`PagedResponse<T>`) com metadados de navegação. Parâmetros opcionais via query string:
+`pageNumber` (padrão 1) e `pageSize` (padrão 100, máx. 100).
+
+```json
+{
+  "items": [...],
+  "pageNumber": 1,
+  "pageSize": 20,
+  "totalItems": 42,
+  "totalPages": 3
+}
+```
+
+**Justificativa:** Os endpoints de listagem não têm paginação no spec mínimo do PDF, mas
+retornar todos os registros sem limite é um anti-pattern para produção — um projeto com
+centenas de tarefas degradaria tempo de resposta e consumo de memória linearmente.
+O envelope paginado vai além do mínimo exigido, demonstra pensamento de produto e resolve
+um problema real sem complexidade excessiva.
+
+`pageNumber` e `pageSize` são parâmetros opcionais: clientes que não enviam recebem a
+primeira página com 100 itens (comportamento razoável e backward-compatible). Clientes
+que precisam de navegação explícita controlam via query string.
+
+**Implementação:**
+```
+Repository: CountAsync + Skip/Take na mesma query (dois roundtrips, otimizável com
+            COUNT(*) OVER() em SQLite se necessário no futuro)
+
+Handler:    Math.Max(1, pageNumber) + Math.Clamp(pageSize, 1, 100) — validação
+            defensiva sem validator dedicado. pageSize acima de 100 é silenciosamente
+            clampado, sem erro, para não quebrar clientes que tentam valores maiores.
+
+Response:   PagedResponse<T> genérico reutilizável em qualquer endpoint de listagem.
+```
+
+**Alternativas consideradas e rejeitadas:**
+- **Cursor-based pagination** — descartado. Mais complexo de implementar e documentar.
+  Offset pagination é suficiente para o volume esperado do desafio e mais familiar para APIs REST.
+- **`Link` header (RFC 5988)** — descartado. Padrão GitHub/GitHub API. Mais difícil de consumir
+  sem lib cliente. Envelope JSON é mais explícito e discoverável para quem lê o contrato OpenAPI.
+- **`X-Total-Count` header** — descartado. Headers customizados não aparecem no schema OpenAPI
+  automaticamente, reduzindo a aderência spec-first do projeto.

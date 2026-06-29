@@ -161,6 +161,80 @@ para acertar todas as ocorrências — incluindo títulos de seção e referênc
 
 ---
 
+## 11. Paginação ausente nos endpoints de listagem — CORRIGIDO
+
+**Sugestão da IA:** implementou os endpoints `GET /projetos` e `GET /projetos/:id/tarefas`
+retornando todos os registros como array plano, sem limite ou metadados de navegação.
+
+**Problema:** retornar todos os registros sem paginação é um anti-pattern para produção —
+com volume crescente, o tempo de resposta e o consumo de memória degradam linearmente.
+O spec mínimo do PDF não exige paginação, mas isso não justifica uma API que não é
+operável em produção real.
+
+**Correção aplicada:** adicionados os query params opcionais `pageNumber` (default 1) e
+`pageSize` (default 100, máx 100) em ambos os endpoints. Resposta alterada de array plano
+para envelope `PagedResponse<T>` com campos `items`, `pageNumber`, `pageSize`, `totalItems`
+e `totalPages`. Openapi.yaml atualizado com os novos schemas `PaginatedProjectResponse`,
+`PaginatedTaskResponse` e o componente `PageMeta` compartilhado.
+
+---
+
+## 12. Bloco CountAsync + Skip/Take duplicado nos repositórios — CORRIGIDO
+
+**Sugestão da IA:** ao implementar paginação, gerou o bloco `CountAsync + Skip/Take +
+ToListAsync` idêntico em `ProjectRepository` e `TaskItemRepository`.
+
+**Problema:** código duplicado em repositórios tem o mesmo risco de qualquer duplicação:
+a próxima correção (ex: adicionar ordenação configurável, timeout, cache) precisaria ser
+aplicada em N lugares — e o segundo lugar é o que vai ser esquecido.
+
+**Minha análise:** instinto inicial foi "coloca no projeto Utils". Mas `CountAsync` e
+`ToListAsync` são métodos de extensão do `Microsoft.EntityFrameworkCore` — adicionar
+EF Core como dependência no Utils violaria o propósito da camada (candidato a NuGet
+independente, conforme decisoes.md). A solução correta é uma extension `internal` dentro
+do próprio `Infra.Persistence`, onde EF Core já é dependência.
+
+**Correção aplicada:** `QueryableExtensions.ToPagedAsync<T>()` criada em
+`Infra.Persistence/Extensions/` como `internal static`. Repositórios reduzidos a:
+```csharp
+return await query.OrderBy(p => p.CreatedAt).ToPagedAsync(pageNumber, pageSize, ct);
+```
+
+---
+
+## 13. Path incorreto no `appsettings.Development.json` — CORRIGIDO
+
+**Sugestão da IA:** configurou o connection string com `Data Source=../../../data/taskflow.db`
+(3 níveis acima), que a partir de `src/TaskFlow.Api/` sobe para `code-labs-leonardo/data/` —
+diretório inexistente na estrutura do projeto.
+
+**Problema:** o banco de dados está em `task-flow/data/taskflow.db`. Para chegar lá a partir
+de `src/TaskFlow.Api/` basta subir **2** níveis (`../../data/taskflow.db`). Com 3 níveis,
+a aplicação falharia ao tentar abrir o banco ao rodar localmente — erro silencioso porque
+o SQLite cria um arquivo vazio se o diretório existir.
+
+**Correção aplicada:** `../../../data/taskflow.db` → `../../data/taskflow.db` em ambas as
+connection strings (`TaskFlowWrite` e `TaskFlowRead`).
+
+---
+
+## 14. FK ausente em `TaskItemConfiguration` — CORRIGIDO
+
+**Sugestão da IA:** ao gerar a configuração Fluent API para `TaskItem`, configurou a propriedade
+`ProjectId` com `.IsRequired()` mas sem declarar o relacionamento com `Project`.
+
+**Problema:** sem `HasOne<Project>().WithMany().HasForeignKey(t => t.ProjectId)`, o EF Core
+não emite a constraint de chave estrangeira no SQLite. Isso significa que `ProjectId` seria
+uma coluna obrigatória sem integridade referencial — seria possível criar tarefas com
+`ProjectId` apontando para projetos inexistentes sem que o banco rejeitasse a operação.
+
+**Correção aplicada:** adicionado o bloco completo de relacionamento com
+`.OnDelete(DeleteBehavior.Restrict)` — mantém o comportamento já definido na regra de negócio
+de exclusão (DELETE /projetos só deve ser bloqueado se houver tarefas associadas, o que a
+constraint FK com Restrict garante no nível do banco).
+
+---
+
 ## Resumo Geral
 
 | # | Problema | Tipo | Status |
@@ -175,3 +249,7 @@ para acertar todas as ocorrências — incluindo títulos de seção e referênc
 | 8 | .NET Aspire sugerido | Rejeitado | ✓ |
 | 9 | Commit acima de 72 chars | Corrigido | ✓ |
 | 10 | Numeração de seções quebrada | Corrigido | ✓ |
+| 11 | Paginação ausente nos endpoints de listagem | Corrigido | ✓ |
+| 12 | `CountAsync + Skip/Take` duplicado nos repositórios | Corrigido | ✓ |
+| 13 | Path com 3 níveis no `appsettings.Development.json` | Corrigido | ✓ |
+| 14 | FK `ProjectId → Project` ausente em `TaskItemConfiguration` | Corrigido | ✓ |
