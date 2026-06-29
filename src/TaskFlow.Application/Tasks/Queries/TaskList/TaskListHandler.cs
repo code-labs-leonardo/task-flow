@@ -3,9 +3,8 @@ using TaskFlow.Application.Common.DTOs;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Application.Common.Mappings;
 using TaskFlow.Application.Tasks.DTOs;
-using TaskFlow.Domain.Entities;
-using TaskFlow.Domain.Enums;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Tasks;
 
 namespace TaskFlow.Application.Tasks.Queries.TaskList;
 

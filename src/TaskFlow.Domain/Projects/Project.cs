@@ -1,7 +1,6 @@
-using TaskFlow.Domain.Enums;
-using TaskFlow.Domain.Exceptions;
+using TaskFlow.Domain.Shared;
 
-namespace TaskFlow.Domain.Entities;
+namespace TaskFlow.Domain.Projects;
 
 public class Project
 {

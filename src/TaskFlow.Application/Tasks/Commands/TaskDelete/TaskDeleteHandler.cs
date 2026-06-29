@@ -1,8 +1,8 @@
 using MediatR;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Application.Common.Mappings;
-using TaskFlow.Domain.Exceptions;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Shared;
+using TaskFlow.Domain.Tasks;
 
 namespace TaskFlow.Application.Tasks.Commands.TaskDelete;
 

@@ -1,4 +1,4 @@
-namespace TaskFlow.Domain.Enums;
+namespace TaskFlow.Domain.Tasks;
 
 public enum TaskPriority
 {

@@ -2,8 +2,7 @@ using MediatR;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Application.Common.Mappings;
 using TaskFlow.Application.Tasks.DTOs;
-using TaskFlow.Domain.Enums;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Tasks;
 
 namespace TaskFlow.Application.Tasks.Commands.TaskUpdate;
 

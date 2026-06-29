@@ -1,7 +1,4 @@
-using TaskFlow.Domain.Entities;
-using TaskFlow.Domain.Enums;
-
-namespace TaskFlow.Domain.Repositories;
+namespace TaskFlow.Domain.Tasks;
 
 public interface ITaskItemRepository
 {

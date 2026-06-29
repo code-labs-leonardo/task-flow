@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using TaskFlow.Domain.Entities;
-using TaskFlow.Infra.Persistence.Configurations;
+using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Tasks;
+using TaskFlow.Infra.Persistence.Projects;
+using TaskFlow.Infra.Persistence.Tasks;
 
 namespace TaskFlow.Infra.Persistence.Contexts;
 

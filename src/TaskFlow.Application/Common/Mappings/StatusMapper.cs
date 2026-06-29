@@ -1,4 +1,4 @@
-using TaskFlow.Domain.Enums;
+using TaskFlow.Domain.Tasks;
 
 namespace TaskFlow.Application.Common.Mappings;
 

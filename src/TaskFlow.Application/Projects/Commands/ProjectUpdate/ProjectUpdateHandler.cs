@@ -1,10 +1,8 @@
 using MediatR;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Application.Projects.DTOs;
-using TaskFlow.Domain.Entities;
-using TaskFlow.Domain.Enums;
-using TaskFlow.Domain.Exceptions;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Shared;
 
 namespace TaskFlow.Application.Projects.Commands.ProjectUpdate;
 

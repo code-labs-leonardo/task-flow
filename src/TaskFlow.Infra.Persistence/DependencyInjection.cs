@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Tasks;
 using TaskFlow.Infra.Persistence.Contexts;
-using TaskFlow.Infra.Persistence.Repositories;
+using TaskFlow.Infra.Persistence.Projects;
+using TaskFlow.Infra.Persistence.Tasks;
 
 namespace TaskFlow.Infra.Persistence;
 

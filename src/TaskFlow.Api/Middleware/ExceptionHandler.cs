@@ -2,7 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Common.Exceptions;
-using TaskFlow.Domain.Exceptions;
+using TaskFlow.Domain.Shared;
 
 namespace TaskFlow.Api.Middleware;
 

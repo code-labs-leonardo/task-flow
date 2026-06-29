@@ -1,8 +1,7 @@
 using MediatR;
 using TaskFlow.Application.Common.DTOs;
 using TaskFlow.Application.Projects.DTOs;
-using TaskFlow.Domain.Enums;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Projects;
 
 namespace TaskFlow.Application.Projects.Queries.ProjectList;
 

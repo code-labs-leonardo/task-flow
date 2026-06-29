@@ -1,4 +1,4 @@
-namespace TaskFlow.Domain.Exceptions;
+namespace TaskFlow.Domain.Shared;
 
 public class DomainException : Exception
 {

@@ -1,7 +1,6 @@
 using MediatR;
 using TaskFlow.Application.Projects.DTOs;
-using TaskFlow.Domain.Entities;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Projects;
 
 namespace TaskFlow.Application.Projects.Commands.ProjectCreate;
 

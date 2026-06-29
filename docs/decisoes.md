@@ -447,6 +447,57 @@ quebrando a separação de responsabilidades da Clean Architecture.
 
 ---
 
+## 18. Refactoring — Reorganização do Domain e Infra.Persistence por Contexto
+
+**Decisão:** Reorganizar `TaskFlow.Domain` e `TaskFlow.Infra.Persistence` de estrutura plana
+(por tipo técnico) para estrutura por contexto de negócio, alinhando com o padrão já
+adotado em `TaskFlow.Application` e `TaskFlow.Api`.
+
+**Origem:** Identificado durante revisão pelo desenvolvedor responsável. A inconsistência
+foi percebida e o refactor foi **explicitamente solicitado** antes da entrega — decisão
+consciente, não omissão.
+
+**Situação anterior (inconsistente):**
+
+```
+TaskFlow.Domain/
+├── Entities/      ← Project.cs e TaskItem.cs misturados
+├── Enums/         ← ProjectStatus.cs, TaskItemStatus.cs, TaskPriority.cs misturados
+├── Repositories/  ← IProjectRepository.cs e ITaskItemRepository.cs misturados
+└── Exceptions/    ← DomainException.cs
+
+TaskFlow.Infra.Persistence/
+├── Configurations/ ← ProjectConfiguration.cs e TaskItemConfiguration.cs misturados
+└── Repositories/   ← ProjectRepository.cs e TaskItemRepository.cs misturados
+```
+
+**Situação após o refactor (consistente):**
+
+```
+TaskFlow.Domain/
+├── Projects/   ← Project.cs · ProjectStatus.cs · IProjectRepository.cs
+├── Tasks/      ← TaskItem.cs · TaskItemStatus.cs · TaskPriority.cs · ITaskItemRepository.cs
+└── Shared/     ← DomainException.cs
+
+TaskFlow.Infra.Persistence/
+├── Projects/   ← ProjectConfiguration.cs · ProjectRepository.cs
+└── Tasks/      ← TaskItemConfiguration.cs · TaskItemRepository.cs
+```
+
+**Justificativa:** O Domain é o núcleo do negócio — ser a camada *menos* organizada por
+contexto era a maior das inconsistências. Ao navegar em "Projects", o desenvolvedor
+encontra entidade, enum e interface de repositório no mesmo lugar, sem alternar entre
+pastas técnicas. O mesmo princípio já estava aplicado em `Application` e `Api` desde
+o início.
+
+A `DomainException` foi isolada em `Shared/` por ser uma preocupação transversal ao domínio,
+não pertencente a nenhum contexto específico.
+
+**Impacto:** Todos os namespaces foram atualizados em cascata — `Application`, `Infra.Persistence`,
+`Api.Middleware`. Nenhuma lógica de negócio foi alterada. 33/33 testes passando após o refactor.
+
+---
+
 ## 17. Paginação nos endpoints de listagem
 
 **Decisão:** `GET /projetos` e `GET /projetos/:id/tarefas` retornam um envelope paginado

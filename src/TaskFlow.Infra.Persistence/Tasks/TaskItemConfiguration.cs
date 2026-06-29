@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Tasks;
 
-namespace TaskFlow.Infra.Persistence.Configurations;
+namespace TaskFlow.Infra.Persistence.Tasks;
 
 public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
 {

@@ -1,11 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using TaskFlow.Domain.Entities;
-using TaskFlow.Domain.Enums;
-using TaskFlow.Domain.Repositories;
+using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Tasks;
 using TaskFlow.Infra.Persistence.Contexts;
 using TaskFlow.Infra.Persistence.Extensions;
 
-namespace TaskFlow.Infra.Persistence.Repositories;
+namespace TaskFlow.Infra.Persistence.Projects;
 
 public class ProjectRepository : IProjectRepository
 {
