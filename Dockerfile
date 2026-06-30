@@ -2,6 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
+# nuget.config limpa fallback folders do Windows (evita erro no publish Alpine)
+COPY nuget.config .
+
 # Copiar apenas os .csproj primeiro para aproveitar o cache de restore
 COPY src/TaskFlow.Domain/TaskFlow.Domain.csproj             src/TaskFlow.Domain/
 COPY src/TaskFlow.Utils/TaskFlow.Utils.csproj               src/TaskFlow.Utils/
