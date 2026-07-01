@@ -1,0 +1,26 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: taskflow-api:latest
+    container_name: taskflow-api
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ConnectionStrings__TaskFlowWrite=Data Source=/app/data/taskflow.db
+      - ConnectionStrings__TaskFlowRead=Data Source=/app/data/taskflow.db
+    volumes:
+      - taskflow-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/projetos"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  taskflow-data:
+    driver: local
